@@ -1,0 +1,3 @@
+(sym_lib_table
+  (lib (name "PilotDingus")(type "KiCad")(uri "${KIPRJMOD}/PilotDingus.kicad_sym")(options "")(descr ""))
+)
