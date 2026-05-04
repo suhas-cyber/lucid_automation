@@ -19,8 +19,8 @@ STEP_DELAY = 2                 # Seconds between each step in V2H sequence
 
 # Channel mapping (change if wired differently)
 C1 = 1   # Grid Contactor
-C2 = 2   # DS Contactor (V2H)
-C3 = 3   # Dr Contactor
+C2 = 2   # DER_V2H Contactor (V2H)
+C3 = 3   # DER Contactor
 # ──────────────────────────────────────────────────────────
 
 client = ModbusTcpClient(RELAY_IP, port=RELAY_PORT)
@@ -58,8 +58,8 @@ def print_status():
     print("│         Contactor Status             │")
     print("├─────────────────────────────────────┤")
     print(f"│  C1 - Grid Contactor  : {status_label(c1)}   │")
-    print(f"│  C2 - DS Contactor    : {status_label(c2)}   │")
-    print(f"│  C3 - Dr Contactor    : {status_label(c3)}   │")
+    print(f"│  C2 - DER_V2H Contactor    : {status_label(c2)}   │")
+    print(f"│  C3 - DER Contactor    : {status_label(c3)}   │")
     print("└─────────────────────────────────────┘")
 
 
