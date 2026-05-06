@@ -1,0 +1,144 @@
+# Panel Rig Configuration
+# Store this file in the same folder as uart_logger.py
+# Or specify path with: python3 uart_logger.py capture -h <IP> -u <USER> -c /path/to/panels_config.yml
+
+panels:
+
+  # Panel 1: in-dsw-wall-001
+  10.91.0.96:
+    name: "IN-SYS-WALL-001"
+    probes:
+      - module: PCM
+        uart_device: /dev/serial/by-id/usb-STMicroelectronics_STLINK-V3_003500493234510533353533-if01
+      - module: MainsMID
+        uart_device: /dev/serial/by-id/usb-STMicroelectronics_STLINK-V3_004800493234511537333934-if01
+      - module: Branch1
+        uart_device: /dev/serial/by-id/usb-STMicroelectronics_STLINK-V3_0022002C3433510E37363934-if01
+      - module: Branch2
+        uart_device: /dev/serial/by-id/usb-STMicroelectronics_STLINK-V3_004B00263333511831363730-if01
+
+  # Panel 2: in-sys-wall-002
+  10.91.0.162:
+    name: "in-sys-wall-002"
+    probes:
+      - module: PCM
+        uart_device: /dev/serial/by-id/usb-STMicroelectronics_STLINK-V3_003300253234511437333934-if01
+      - module: MainsMID
+        uart_device: /dev/serial/by-id/usb-STMicroelectronics_STLINK-V3_003C00393234511437333934-if01
+      - module: Branch1
+        uart_device: /dev/serial/by-id/usb-STMicroelectronics_STLINK-V3_001C003F3234511437333934-if01
+      - module: Branch2
+        uart_device: /dev/serial/by-id/usb-STMicroelectronics_STLINK-V3_004900253234511437333934-if01
+
+        # Panel 3: IN-QA-WALL-001-1
+  10.91.0.95:
+    name: "IN-QA-WALL-001-1"
+    probes:
+      - module: PCM
+        uart_device: /dev/serial/by-id/usb-STMicroelectronics_STLINK-V3_004C00493433510E37363934-if01
+      - module: MainsMID
+        uart_device: /dev/serial/by-id/usb-STMicroelectronics_STLINK-V3_0036003A3234511137333934-if01
+      - module: Branch1
+        uart_device: /dev/serial/by-id/usb-STMicroelectronics_STLINK-V3_002000253234511137333934-if01
+      - module: Branch2
+        uart_device: /dev/serial/by-id/usb-STMicroelectronics_STLINK-V3_004500423234511037333934-if01
+
+        # Panel 4: IN-QA-WALL-001-2
+  10.91.0.89:
+    name: "IN-QA-WALL-001"
+    probes:
+      - module: PCM
+        uart_device: /dev/serial/by-id/usb-STMicroelectronics_STLINK-V3_0021000D4142501220353451-if01
+      - module: MainsMID
+        uart_device: /dev/serial/by-id/usb-STMicroelectronics_STLINK-V3_0053003B3234511437333934-if01
+      - module: Branch1
+        uart_device: /dev/serial/by-id/usb-STMicroelectronics_STLINK-V3_001C003D3234511437333934-if01
+      - module: Branch2
+        uart_device: /dev/serial/by-id/usb-STMicroelectronics_STLINK-V3_0040001D4142501320353451-if01
+    subpanel:
+      - module: PCM
+        uart_device: /dev/serial/by-id/usb-STMicroelectronics_STLINK-V3_002800333234511437333934-if01
+      - module: Branch1
+        uart_device: /dev/serial/by-id/usb-STMicroelectronics_STLINK-V3_0040002A3234511437333934-if01
+      - module: Branch2
+        uart_device: /dev/serial/by-id/usb-STMicroelectronics_STLINK-V3_0046003D3234511437333934-if01
+      - module: Branch3
+        uart_device: /dev/serial/by-id/usb-STMicroelectronics_STLINK-V3_004B00233234511437333934-if01
+    # Panel 5: IN-DSW-WALL-001-1 main+sub
+  10.91.0.98:
+    name: "IN-DSW-WALL-001"
+    probes:
+      - module: PCM
+        uart_device: /dev/serial/by-id/usb-STMicroelectronics_STLINK-V3_0026000A4142501220353451-if01
+      - module: MainsMID
+        uart_device: /dev/serial/by-id/usb-STMicroelectronics_STLINK-V3_005200403234511637333934-if01
+      - module: Branch1
+        uart_device: /dev/serial/by-id/usb-STMicroelectronics_STLINK-V3_0042001B4142501320353451-if01
+      - module: Branch2
+        uart_device: /dev/serial/by-id/usb-STMicroelectronics_STLINK-V3_0033001E4142501320353451-if01
+      - module: Branch3
+        uart_device: /dev/serial/by-id/usb-STMicroelectronics_STLINK-V3_002400274142501220353451-if01
+      - module: Branch4
+        uart_device: /dev/serial/by-id/usb-STMicroelectronics_STLINK-V3_0035001D4142501220353451-if01
+      - module: Branch5
+        uart_device: /dev/serial/by-id/usb-STMicroelectronics_STLINK-V3_0019001C4142501220353451-if01
+    subpanel:
+      - module: PCM
+        uart_device: /dev/serial/by-id/usb-STMicroelectronics_STLINK-V3_0036000A4142501220353451-if01
+      - module: Branch1
+        uart_device: /dev/serial/by-id/usb-STMicroelectronics_STLINK-V3_0023001E4142501320353451-if01
+      - module: Branch2
+        uart_device: /dev/serial/by-id/usb-STMicroelectronics_STLINK-V3_0019001F4142501320353451-if01
+      - module: Branch3
+        uart_device: /dev/serial/by-id/usb-STMicroelectronics_STLINK-V3_002A001A4142501220353451-if01
+      - module: Branch4
+        uart_device: /dev/serial/by-id/usb-STMicroelectronics_STLINK-V3_002F001E4142501320353451-if01
+      - module: Branch5
+        uart_device: /dev/serial/by-id/usb-STMicroelectronics_STLINK-V3_0029000C4142501220353451-if01
+      - module: Branch6
+        uart_device: /dev/serial/by-id/usb-STMicroelectronics_STLINK-V3_0019001E4142501320353451-if01
+
+  # Panel 6: in-qa-wall-002-1
+  10.91.0.95:
+    name: "in-qa-wall-002-1"
+    probes:
+      - module: PCM
+        uart_device: /dev/serial/by-id/usb-STMicroelectronics_STLINK-V3_0018003B4142501220353451-if01
+      - module: MainsMID
+        uart_device: /dev/serial/by-id/usb-STMicroelectronics_STLINK-V3_0025003C3234511437333934-if01
+      - module: Branch1
+        uart_device: /dev/serial/by-id/usb-STMicroelectronics_STLINK-V3_004400323234511737333934-if01
+      - module: Branch2
+        uart_device: /dev/serial/by-id/usb-STMicroelectronics_STLINK-V3_004900313234511637333934-if01
+      - module: Branch3
+        uart_device: /dev/serial/by-id/usb-STMicroelectronics_STLINK-V3_0015000C4142501220353451-if01
+      - module: Branch4
+        uart_device: /dev/serial/by-id/usb-STMicroelectronics_STLINK-V3_0027003D3234511437333934-if01
+      - module: Branch5
+        uart_device: /dev/serial/by-id/usb-STMicroelectronics_STLINK-V3_0027004D3234511637333934-if01
+     # Subpanel probes (captured with --sub flag)
+    subpanel:
+      - module: PCM
+        uart_device: /dev/serial/by-id/usb-STMicroelectronics_STLINK-V3_0056003B3234511437333934-if01
+      - module: Branch4
+        uart_device: /dev/serial/by-id/usb-STMicroelectronics_STLINK-V3_0019003C3234511037333934-if01
+      - module: Branch1
+        uart_device: /dev/serial/by-id/usb-STMicroelectronics_STLINK-V3_002A00253234511437333934-if01
+      - module: Branch6
+        uart_device: /dev/serial/by-id/usb-STMicroelectronics_STLINK-V3_0032003E3234511437333934-if01
+      - module: Branch3
+        uart_device: /dev/serial/by-id/usb-STMicroelectronics_STLINK-V3_004200393234511537333934-if01
+      - module: Branch2
+        uart_device: /dev/serial/by-id/usb-STMicroelectronics_STLINK-V3_004300353234511037333934-if01
+      - module: Branch5
+        uart_device: /dev/serial/by-id/usb-STMicroelectronics_STLINK-V3_0052003C3234511437333934-if01
+        
+
+  # Add more panels below:
+  # 10.91.0.xxx:
+  #   name: "panel-name"
+  #   probes:
+  #     - module: PCM
+  #       uart_device: /dev/serial/by-id/usb-STMicroelectronics_STLINK-V3_SERIALNUMBER-if01
+  #     - module: MainsMID
+  #       uart_device: /dev/serial/by-id/usb-STMicroelectronics_STLINK-V3_SERIALNUMBER-if01

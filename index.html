@@ -1,0 +1,856 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>EV Lab Dashboard</title>
+  <meta charset="UTF-8">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: monospace; background: #0d1117; color: #e6edf3; padding: 20px; }
+
+    h1 { color: #58a6ff; margin-bottom: 20px; font-size: 18px; display: flex;
+         align-items: center; gap: 10px; }
+    .conn-dot { width: 10px; height: 10px; border-radius: 50%;
+                background: #f85149; display: inline-block; }
+    .conn-dot.online { background: #3fb950; }
+
+    .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; margin-bottom: 14px; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
+
+    .card { background: #161b22; border: 1px solid #30363d;
+            border-radius: 8px; padding: 14px; }
+    .card h2 { color: #58a6ff; font-size: 12px; margin-bottom: 10px;
+               text-transform: uppercase; letter-spacing: 1px; }
+
+    .row { display: flex; justify-content: space-between; padding: 4px 0;
+           border-bottom: 1px solid #21262d; font-size: 12px; }
+    .lbl { color: #8b949e; }
+    .val { color: #e6edf3; font-weight: bold; }
+    .val.blue   { color: #58a6ff; }
+    .val.green  { color: #3fb950; }
+    .val.yellow { color: #d29922; }
+    .val.red    { color: #f85149; }
+    .val.gray   { color: #8b949e; }
+
+    .badge { display: inline-block; padding: 3px 10px; border-radius: 12px;
+             font-size: 11px; font-weight: bold; margin-bottom: 8px; }
+
+    /* Pilot control buttons */
+    .btn { display: block; width: 100%; padding: 10px; border: 2px solid transparent;
+           border-radius: 6px; cursor: pointer; font-family: monospace;
+           font-weight: bold; font-size: 13px; margin-bottom: 6px; transition: 0.15s; }
+    .btn:hover { opacity: 0.85; }
+    .btn.active { border-color: white; }
+    .btn-watch   { background: #1f6feb; color: white; }
+    .btn-connect { background: #d29922; color: black; }
+    .btn-charge  { background: #3fb950; color: black; }
+
+    .relay-row { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0; align-items: center; }
+    .relay-pair { display: flex; gap: 6px; }
+    .btn-relay { padding: 8px 12px; border-radius: 6px; border: none; cursor: pointer;
+                 font-family: monospace; font-weight: bold; font-size: 11px; }
+    .btn-relay-on  { background: #3fb950; color: #0d1117; }
+    .btn-relay-off { background: #21262d; color: #8b949e; border: 1px solid #30363d; }
+    .btn-relay.relay-active {
+      box-shadow: 0 0 0 2px #58a6ff;
+      border: 1px solid #58a6ff;
+    }
+    .btn-seq { margin-top: 8px; width: 100%; padding: 10px; border-radius: 6px; border: none;
+               cursor: pointer; font-family: monospace; font-weight: bold; font-size: 12px; }
+    .btn-seq-init { background: #1f6feb; color: #fff; }
+    .btn-seq-v2h  { background: #d29922; color: #0d1117; margin-top: 6px; }
+
+    /* Log */
+    #log { height: 160px; overflow-y: auto; background: #0d1117;
+           padding: 8px; border-radius: 4px; font-size: 11px; margin-top: 10px; }
+    .log-line { padding: 2px 0; border-bottom: 1px solid #161b22; color: #8b949e; }
+    .log-line.ev     { color: #58a6ff; }
+    .log-line.pilot  { color: #3fb950; }
+    .log-line.warn   { color: #d29922; }
+    .log-line.err    { color: #f85149; }
+
+    /* V2H status indicator */
+    .v2h-status { display: flex; align-items: center; gap: 8px;
+                  padding: 6px 0; border-bottom: 1px solid #21262d; }
+    .v2h-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+
+    /* SOC bar */
+    .soc-bar { background: #21262d; border-radius: 4px; height: 12px;
+               margin-top: 4px; overflow: hidden; }
+    .soc-fill { height: 100%; border-radius: 4px; transition: width 0.5s;
+                background: #3fb950; }
+
+    /* Timestamps */
+    .ts { font-size: 10px; color: #8b949e; margin-top: 6px; text-align: right; }
+
+    /* Contactor interlock — full-screen warning */
+    .interlock-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 99999;
+      background: rgba(0, 0, 0, 0.93);
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+    .interlock-overlay.show { display: flex; }
+    .interlock-inner {
+      text-align: center;
+      padding: 32px;
+      max-width: 92vw;
+      pointer-events: none;
+    }
+    .interlock-glyph {
+      font-size: clamp(100px, 28vw, 220px);
+      line-height: 1;
+      filter: drop-shadow(0 0 28px rgba(248, 81, 73, 0.85));
+    }
+    .interlock-title {
+      font-size: clamp(20px, 5vw, 36px);
+      color: #f85149;
+      font-weight: bold;
+      margin-top: 12px;
+      letter-spacing: 0.06em;
+    }
+    .interlock-msg {
+      font-size: clamp(14px, 3.5vw, 22px);
+      color: #e6edf3;
+      margin-top: 20px;
+      line-height: 1.45;
+      font-weight: bold;
+    }
+    .interlock-hint {
+      margin-top: 28px;
+      font-size: 13px;
+      color: #8b949e;
+    }
+
+    .dash-top { margin-bottom: 14px; }
+    .dash-main {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      align-items: start;
+      margin-bottom: 14px;
+    }
+    @media (max-width: 1100px) {
+      .dash-main { grid-template-columns: 1fr; }
+    }
+    .dash-left, .dash-right { display: flex; flex-direction: column; gap: 14px; }
+    .inp-row { margin-bottom: 8px; }
+    .inp-row label {
+      display: block; font-size: 10px; color: #8b949e; margin-bottom: 3px;
+    }
+    .inp-row input, .inp-row textarea {
+      width: 100%; padding: 6px 8px; border-radius: 4px; border: 1px solid #30363d;
+      background: #0d1117; color: #e6edf3; font-family: monospace; font-size: 11px;
+      box-sizing: border-box;
+    }
+    .inp-row textarea { min-height: 56px; resize: vertical; }
+    .btn-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; align-items: center; }
+    .btn-cap {
+      padding: 8px 12px; border-radius: 6px; border: none; cursor: pointer;
+      font-family: monospace; font-weight: bold; font-size: 11px;
+    }
+    .btn-cap-start { background: #238636; color: #fff; }
+    .btn-cap-stop  { background: #da3633; color: #fff; }
+    .btn-cap-dl    { background: #21262d; color: #58a6ff; border: 1px solid #30363d; }
+    .sub-h {
+      font-size: 11px; color: #d29922; margin: 10px 0 6px;
+      text-transform: uppercase; letter-spacing: 0.05em;
+    }
+    #dash-audit {
+      height: 200px; overflow-y: auto; background: #0d1117;
+      padding: 8px; border-radius: 4px; font-size: 11px; margin-top: 8px;
+    }
+    .dash-audit-line { padding: 2px 0; border-bottom: 1px solid #161b22; color: #8b949e; }
+    #log-files-unified { font-size: 10px; color: #8b949e; max-height: 72px; overflow-y: auto; }
+  </style>
+</head>
+<body>
+
+<div id="interlock-overlay" class="interlock-overlay" role="alertdialog" aria-modal="true" aria-labelledby="interlock-title">
+  <div class="interlock-inner">
+    <div id="interlock-glyph" class="interlock-glyph">&#x1F6AB;</div>
+    <div id="interlock-title" class="interlock-title">CONTACTOR INTERLOCK</div>
+    <div id="interlock-msg" class="interlock-msg"></div>
+    <div class="interlock-hint">Click anywhere to dismiss</div>
+  </div>
+</div>
+
+<h1>
+  ⚡ EV Lab Dashboard
+  <span class="conn-dot" id="ws-dot"></span>
+  <span id="ws-status" style="font-size:12px;color:#8b949e">Connecting...</span>
+</h1>
+
+<div class="dash-main">
+
+  <div class="dash-left">
+
+    <!-- Log capturing: unified CAN + Modbus -->
+    <div class="card">
+      <h2>📼 Log capturing — CAN bus &amp; Modbus</h2>
+      <p style="font-size:10px;color:#8b949e;line-height:1.4;margin-bottom:8px">
+        Uses <code>updated_log.py</code> on the server: SSH to the lab host, CAN + Modbus RTU streams to
+        <strong>two files</strong> per run (<code>canbus_capture_*.txt</code>, <code>modbus_logs_*.txt</code>)
+        under the session folder. Stop ends capture.
+      </p>
+      <div class="inp-row"><label>SSH username</label>
+        <input type="text" id="cap-unified-user" autocomplete="username" placeholder="dsw"></div>
+      <div class="inp-row"><label>SSH host (IP)</label>
+        <input type="text" id="cap-unified-host" autocomplete="off" placeholder="10.91.0.98"></div>
+      <div class="inp-row"><label>SSH password</label>
+        <input type="password" id="cap-unified-pass" autocomplete="current-password"></div>
+      <div class="btn-row">
+        <button type="button" class="btn-cap btn-cap-start" onclick="unifiedStart()">Start capture</button>
+        <button type="button" class="btn-cap btn-cap-stop" onclick="unifiedStop()">Stop</button>
+        <span id="cap-unified-badge" class="badge" style="background:#21262d">idle</span>
+      </div>
+      <div class="sub-h">CAN bus — relay status (from filtered capture)</div>
+      <div class="row"><span class="lbl">MID relay</span><span class="val" id="cap-can-mid">—</span></div>
+      <div class="row"><span class="lbl">DER relay</span><span class="val" id="cap-can-der">—</span></div>
+      <div class="row"><span class="lbl">NFT relay</span><span class="val" id="cap-can-nft">—</span></div>
+      <div class="sub-h">Modbus — MID-Led-Mode-Request (latest)</div>
+      <div class="row"><span class="lbl">Mode request</span>
+        <span class="val yellow" id="cap-mod-led" style="max-width:65%;text-align:right;font-size:11px">—</span></div>
+      <div id="log-files-unified"></div>
+    </div>
+
+    <!-- UART -->
+    <div class="card">
+      <h2>📟 UART logger</h2>
+      <p style="font-size:10px;color:#8b949e;line-height:1.4;margin-bottom:8px">
+        Runs <code>uart_logger_4.py</code> on the server (non-interactive). Enter filter strings one per line; empty lines are ignored. Password is sent only to your EV Lab server.
+      </p>
+      <div class="inp-row"><label>Username</label>
+        <input type="text" id="cap-uart-user" autocomplete="username"></div>
+      <div class="inp-row"><label>IP address</label>
+        <input type="text" id="cap-uart-host" autocomplete="off"></div>
+      <div class="inp-row"><label>Password</label>
+        <input type="password" id="cap-uart-pass" autocomplete="current-password"></div>
+      <div class="inp-row"><label>Capture strings (optional, one per line)</label>
+        <textarea id="cap-uart-strings" placeholder="One string per line"></textarea></div>
+      <div class="btn-row">
+        <button type="button" class="btn-cap btn-cap-start" onclick="uartStart()">Start UART capture</button>
+        <button type="button" class="btn-cap btn-cap-stop" onclick="uartStop()">Stop</button>
+        <span id="cap-uart-badge" class="badge" style="background:#21262d">idle</span>
+      </div>
+      <div class="sub-h">Downloads (click when paths are listed)</div>
+      <div id="cap-uart-links" style="font-size:10px;color:#8b949e;margin-top:6px;line-height:1.45"></div>
+    </div>
+
+    <!-- Dashboard action log -->
+    <div class="card">
+      <h2>📋 Live dashboard actions
+        <button type="button" onclick="clearDashAudit()"
+          style="float:right;background:#21262d;color:#8b949e;border:none;
+                 padding:2px 8px;border-radius:4px;cursor:pointer;font-size:10px">
+          Clear view
+        </button>
+      </h2>
+      <button type="button" class="btn-cap btn-cap-dl" onclick="downloadDashAudit()" style="margin-bottom:6px">
+        Download action log
+      </button>
+      <div id="dash-audit"></div>
+    </div>
+
+  </div>
+
+  <div class="dash-right">
+
+    <div class="card">
+      <h2>⚡ Contactors — Waveshare relay <span id="relay-ip" style="color:#8b949e;font-size:10px"></span></h2>
+      <div id="relay-badge" class="badge" style="background:#21262d">--</div>
+      <div class="row"><span class="lbl">C1 — GRID</span>
+                       <span class="val" id="r-c1">--</span></div>
+      <div class="row"><span class="lbl">C2 — DER_V2H</span>
+                       <span class="val" id="r-c2">--</span></div>
+      <div class="row"><span class="lbl">C3 — DER</span>
+                       <span class="val" id="r-c3">--</span></div>
+      <p style="font-size:10px;color:#8b949e;line-height:1.35;margin:6px 0 4px">
+        <strong>Connect</strong> / <strong>Disconnect</strong> refer to the electrical path for each leg
+        (shown as CONNECTED / DISCONNECTED below). Relay NO/NC wiring is applied on the server.
+      </p>
+      <div class="relay-row">
+        <div class="relay-pair">
+          <button type="button" class="btn-relay btn-relay-on" id="relay-c1-conn" onclick="relayCh(1,true)">C1 Connect</button>
+          <button type="button" class="btn-relay btn-relay-off" id="relay-c1-disc" onclick="relayCh(1,false)">C1 Disconnect</button>
+        </div>
+        <div class="relay-pair">
+          <button type="button" class="btn-relay btn-relay-on" id="relay-c2-conn" onclick="relayCh(2,true)">C2 Connect</button>
+          <button type="button" class="btn-relay btn-relay-off" id="relay-c2-disc" onclick="relayCh(2,false)">C2 Disconnect</button>
+        </div>
+        <div class="relay-pair">
+          <button type="button" class="btn-relay btn-relay-on" id="relay-c3-conn" onclick="relayCh(3,true)">C3 Connect</button>
+          <button type="button" class="btn-relay btn-relay-off" id="relay-c3-disc" onclick="relayCh(3,false)">C3 Disconnect</button>
+        </div>
+      </div>
+      <button type="button" class="btn-seq btn-seq-init" onclick="relayInitial()">Initial: C1 connect → C2 disconnect → C3 connect</button>
+      <button type="button" class="btn-seq btn-seq-v2h" onclick="relayV2h()">V2H sequence (C1 disconnect → C3 disconnect → C2 connect)</button>
+      <button type="button" class="btn-seq btn-seq-init" onclick="relayGridReturn()" style="margin-top:6px;background:#8250df;color:#fff">
+        Grid return (C1 connect → C2 disconnect → C3 connect)
+      </button>
+    </div>
+
+    <div class="card">
+      <h2>Lucid — V2H setup</h2>
+      <div id="v2h-badge" class="badge" style="background:#21262d">--</div>
+      <div id="lucid-checklist" style="margin-bottom:8px"></div>
+      <div class="row"><span class="lbl">V2H system status</span>
+                       <span class="val blue" id="v-v2h-system">--</span></div>
+      <div class="row"><span class="lbl">MID connection status</span>
+                       <span class="val" id="v-mid">--</span></div>
+      <div style="margin-top:8px;">
+        <div class="row" style="border:none;padding-bottom:2px;">
+          <span class="lbl">Battery SOC</span>
+          <span class="val green" id="v-soc">-- %</span>
+        </div>
+        <div class="soc-bar">
+          <div class="soc-fill" id="v-soc-bar" style="width:0%"></div>
+        </div>
+      </div>
+      <div class="row" style="margin-top:6px;">
+        <span class="lbl">Battery SOH</span>
+        <span class="val green" id="v-soh">-- %</span>
+      </div>
+    </div>
+
+    <div class="card" id="pilot-controls">
+      <h2>🎛 Pilot Dingus Control</h2>
+      <button class="btn btn-watch"   onclick="setMode('WATCH')">WATCH / HIZ (~12V)</button>
+      <button class="btn btn-connect" onclick="setMode('CONNECT')">CONNECT (~9V)</button>
+      <button class="btn btn-charge"  onclick="setMode('CHARGE')">CHARGE (~6V)</button>
+      <div style="margin-top:10px;font-size:11px;color:#8b949e">
+        Active Mode: <span id="p-active-mode" style="color:#58a6ff;font-weight:bold">--</span>
+      </div>
+      <div style="margin-top:6px;font-size:11px;color:#8b949e">
+        State Changes: <span id="p-changes" style="color:#e6edf3">--</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>📡 Pilot Signal — Live Data</h2>
+      <div id="pilot-badge" class="badge" style="background:#21262d">--</div>
+      <div class="row"><span class="lbl">Mode</span>
+                       <span class="val blue"   id="p-mode">--</span></div>
+      <div class="row"><span class="lbl">J1772 State</span>
+                       <span class="val"        id="p-state">--</span></div>
+      <div class="row"><span class="lbl">High Voltage</span>
+                       <span class="val blue"   id="p-hv">-- V</span></div>
+      <div class="row"><span class="lbl">Low Voltage</span>
+                       <span class="val"        id="p-lv">-- V</span></div>
+      <div class="row"><span class="lbl">Duty Cycle</span>
+                       <span class="val green"  id="p-duty">-- %</span></div>
+      <div class="row"><span class="lbl">Frequency</span>
+                       <span class="val green"  id="p-freq">-- Hz</span></div>
+      <div class="row"><span class="lbl">Advertised Current</span>
+                       <span class="val yellow" id="p-advc">-- A</span></div>
+    </div>
+
+    <button type="button" class="btn-seq btn-seq-v2h" id="btn-v2h-oneclick"
+      title="Reserved for your next workflow step" style="width:100%">
+      V2H — one click
+    </button>
+
+  </div>
+
+</div>
+
+<script>
+// ── WebSocket ──────────────────────────────────────────────────────────────
+const proto = location.protocol === "https:" ? "wss" : "ws";
+const ws = new WebSocket(`${proto}://${location.host}/ws`);
+const dot = document.getElementById("ws-dot");
+const wsSt = document.getElementById("ws-status");
+
+ws.onopen    = () => { dot.classList.add("online");
+                       wsSt.textContent = "Connected"; };
+ws.onclose   = () => { dot.classList.remove("online");
+                       wsSt.textContent = "Disconnected — reload to reconnect"; };
+ws.onerror   = () => { wsSt.textContent = "Connection error"; };
+
+// ── State maps ─────────────────────────────────────────────────────────────
+const STATE_DESC = {
+  A:"Standby (no EV)", B1:"EV Connected", B2:"EV Connected+PWM",
+  C:"Charging", D:"Charging+Vent", E:"No Power", F:"EVSE Error", U:"Unknown"
+};
+const STATE_COLOR = {
+  A:"#1f6feb", B1:"#d29922", B2:"#d29922",
+  C:"#3fb950", D:"#3fb950", E:"#f85149", F:"#f85149", U:"#8b949e"
+};
+
+/** Last relay snapshot from WebSocket (for client-side interlock before POST). */
+let lastContactor = { available: false, c1: false, c2: false, c3: false };
+
+function checkContactorInterlock(c1, c2, c3, prev) {
+  if (c2 && c3) {
+    return {
+      ok: false,
+      msg: "Interlock: C2 (DER_V2H) and C3 (DER) cannot both be connected.",
+    };
+  }
+  if (!prev || !prev.available)
+    return { ok: true };
+  const pe1 = prev.c1;
+  const pe2 = prev.c2;
+  if (c1 && c2) {
+    if (pe1 && !pe2 && c2) {
+      return {
+        ok: false,
+        msg:
+          "Interlock: cannot connect C2 while C1 is already connected without C2 "
+          + "(disconnect C1 first, or run Grid return sequence).",
+      };
+    }
+    if (!pe1 && pe2 && c1) {
+      return {
+        ok: false,
+        msg:
+          "Interlock: cannot connect C1 while C2 is already connected without C1 "
+          + "(disconnect C2 first).",
+      };
+    }
+  }
+  return { ok: true };
+}
+
+function updateRelayBtnHl(c1, c2, c3) {
+  [[1, c1], [2, c2], [3, c3]].forEach(([n, conn]) => {
+    const onB = document.getElementById(`relay-c${n}-conn`);
+    const offB = document.getElementById(`relay-c${n}-disc`);
+    if (!onB || !offB)
+      return;
+    onB.classList.toggle("relay-active", !!conn);
+    offB.classList.toggle("relay-active", !conn);
+  });
+}
+
+function clearRelayBtnHl() {
+  document.querySelectorAll(".btn-relay.relay-active").forEach((b) => {
+    b.classList.remove("relay-active");
+  });
+}
+
+function showInterlockOverlay(msg) {
+  const overlay = document.getElementById("interlock-overlay");
+  document.getElementById("interlock-msg").textContent =
+    msg || "Forbidden contactor combination — check connect/disconnect rules.";
+  overlay.classList.add("show");
+  overlay.onclick = () => {
+    overlay.classList.remove("show");
+    overlay.onclick = null;
+  };
+}
+
+function relayFailureMessage(res, j, fallback) {
+  const msg = (j && j.error) || fallback || `HTTP ${res.status}`;
+  if (res.status === 409 || (j && j.interlock))
+    showInterlockOverlay(msg);
+  return msg;
+}
+
+// ── WebSocket message handler ──────────────────────────────────────────────
+ws.onmessage = e => {
+  const d = JSON.parse(e.data);
+
+  if (d.type === "error") {
+    dashAuditClient(`WebSocket error: ${d.msg}`);
+    return;
+  }
+
+  if (d.type !== "update") return;
+
+  // ── Lucid V2H (lucid_v2h from getconfiguration.cgi) ───────────────────────
+  const lv = d.lucid_v2h || {};
+  const vb = document.getElementById("v2h-badge");
+  const listEl = document.getElementById("lucid-checklist");
+    if (lv.error) {
+    vb.textContent = "No Lucid data";
+    vb.style.background = "#f85149";
+    setText("v-v2h-system", "--");
+    if (listEl) {
+      listEl.innerHTML = `<div style="color:#f85149;font-size:11px;line-height:1.4">`
+        + `${lv.error}<br><span style="color:#8b949e">${lv.hint || ""}</span></div>`;
+    }
+  } else if (listEl && Array.isArray(lv.checklist)) {
+    const allOk = lv.checklist.length && lv.checklist.every(c => c.ok);
+    vb.textContent = allOk ? "Prerequisites OK" : "Check pending";
+    vb.style.background = allOk ? "#3fb950" : "#d29922";
+    listEl.innerHTML = lv.checklist.map(c => {
+      const mark = c.ok ? "✓" : "✗";
+      const col = c.ok ? "#3fb950" : "#f85149";
+      return `<div class="row" style="align-items:flex-start;gap:8px">`
+        + `<span class="lbl" style="flex:1;line-height:1.35">${c.label}</span>`
+        + `<span style="color:${col};font-weight:bold;font-size:14px">${mark}</span>`
+        + `</div>`;
+    }).join("");
+  } else if (listEl) {
+    vb.textContent = "—";
+    vb.style.background = "#21262d";
+    listEl.innerHTML = "";
+  }
+  const v2hSys = lv.v2h_system_status || "";
+  setText("v-v2h-system", v2hSys.trim() ? v2hSys : "--");
+  setText("v-mid", lv.mid_status || "--");
+
+  const soc = parseInt(lv.soc_pct, 10) || 0;
+  setText("v-soc", (lv.soc_pct != null && lv.soc_pct !== "") ? lv.soc_pct + " %" : "-- %");
+  setText("v-soh", (lv.soh_pct != null && lv.soh_pct !== "") ? lv.soh_pct + " %" : "-- %");
+  const fill = document.getElementById("v-soc-bar");
+  fill.style.width = soc + "%";
+  fill.style.background = soc > 50 ? "#3fb950" : soc > 20 ? "#d29922" : "#f85149";
+
+  // ── Pilot ─────────────────────────────────────────────────────────────────
+  const p = d.pilot || {};
+  const pb = document.getElementById("pilot-badge");
+  const fmtN = (v, dec, suf) => {
+    const n = Number(v);
+    return Number.isFinite(n) ? n.toFixed(dec) + suf : "--";
+  };
+
+  if (p.available === false) {
+    pb.textContent = p.error || "Pilot offline";
+    pb.style.background = "#f85149";
+    setText("p-mode", "--");
+    setText("p-active-mode", "--");
+    setText("p-state", "--");
+    setText("p-hv", "-- V");
+    setText("p-lv", "-- V");
+    setText("p-duty", "-- %");
+    setText("p-freq", "-- Hz");
+    setText("p-advc", "-- A");
+    setText("p-changes", "--");
+  } else {
+    const waiting = p.mode === "Waiting";
+    pb.textContent = waiting ? "Waiting for serial…"
+      : (p.state ? `${p.state} — ${STATE_DESC[p.state] || "?"}` : "--");
+    pb.style.background = waiting ? "#8b949e" : (STATE_COLOR[p.state] || "#21262d");
+
+    setText("p-mode",        p.mode  || "--");
+    setText("p-active-mode", p.mode  || "--");
+    setText("p-state",       p.state ? `${p.state} (${STATE_DESC[p.state] || "?"})` : "--");
+    setText("p-hv",          fmtN(p.high_v, 2, " V"));
+    setText("p-lv",          fmtN(p.low_v, 2, " V"));
+    setText("p-duty",        fmtN(p.duty_pct, 1, " %"));
+    setText("p-freq",        fmtN(p.frequency_hz, 1, " Hz"));
+    setText("p-advc",        fmtN(p.adv_current, 1, " A"));
+    setText("p-changes",     String(p.state_changes ?? "--"));
+  }
+
+  // Highlight active mode button (skip while waiting / no mode)
+  document.querySelectorAll("#pilot-controls .btn").forEach(b => b.classList.remove("active"));
+  const modeIdx = {WATCH:0, CONNECT:1, CHARGE:2}[p.mode];
+  const pbBtns = document.querySelectorAll("#pilot-controls .btn");
+  if (modeIdx !== undefined && pbBtns[modeIdx])
+    pbBtns[modeIdx].classList.add("active");
+
+  // ── Contactors (Modbus relay) ───────────────────────────────────────────
+  const r = d.contactor || {};
+  const rb = document.getElementById("relay-badge");
+  const rlab = (connected) => (connected ? "CONNECTED" : "DISCONNECTED");
+  if (r.available === false) {
+    lastContactor = { available: false, c1: false, c2: false, c3: false };
+    rb.textContent = r.error || "Relay offline";
+    rb.style.background = "#f85149";
+    setText("r-c1", "--");
+    setText("r-c2", "--");
+    setText("r-c3", "--");
+    setText("relay-ip", "");
+    clearRelayBtnHl();
+  } else {
+    lastContactor = {
+      available: true,
+      c1: !!r.c1_grid_closed,
+      c2: !!r.c2_ds_closed,
+      c3: !!r.c3_dr_closed,
+    };
+    if (r.interlock_violation) {
+      rb.textContent = "⚠ INTERLOCK — C2 and C3 both CONNECTED (check hardware)";
+      rb.style.background = "#f85149";
+    } else {
+      rb.textContent = "Modbus OK";
+      rb.style.background = "#3fb950";
+    }
+    setText("r-c1", rlab(r.c1_grid_closed));
+    setText("r-c2", rlab(r.c2_ds_closed));
+    setText("r-c3", rlab(r.c3_dr_closed));
+    setText("relay-ip", r.ip ? `(${r.ip})` : "");
+    updateRelayBtnHl(!!r.c1_grid_closed, !!r.c2_ds_closed, !!r.c3_dr_closed);
+  }
+};
+
+// ── Helpers ────────────────────────────────────────────────────────────────
+function setText(id, val) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = val ?? "--";
+}
+
+async function setMode(mode) {
+  try {
+    const r = await fetch(`/api/pilot/mode/${mode}`, { method: "POST" });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok || j.error)
+      await dashAuditClient(`Pilot mode ${mode} failed: ${j.error || r.status}`);
+    await refreshAudit();
+  } catch (e) {
+    await dashAuditClient(`Pilot request failed: ${e}`);
+  }
+}
+
+async function relayCh(which, on) {
+  if (lastContactor.available) {
+    const c1 = which === 1 ? on : lastContactor.c1;
+    const c2 = which === 2 ? on : lastContactor.c2;
+    const c3 = which === 3 ? on : lastContactor.c3;
+    const ic = checkContactorInterlock(c1, c2, c3, lastContactor);
+    if (!ic.ok) {
+      showInterlockOverlay(ic.msg);
+      void dashAuditClient(`Interlock blocked: ${ic.msg}`);
+      return;
+    }
+  }
+  try {
+    const res = await fetch(`/api/contactor/channel/${which}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ on }),
+    });
+    const j = await res.json().catch(() => ({}));
+    if (!res.ok || j.error) {
+      const msg = relayFailureMessage(res, j, j.error);
+      await dashAuditClient(`Relay C${which} failed: ${msg}`);
+    }
+    await refreshAudit();
+  } catch (e) {
+    await dashAuditClient(`Relay request failed: ${e}`);
+  }
+}
+
+async function relayInitial() {
+  try {
+    const res = await fetch("/api/contactor/initial", { method: "POST" });
+    const j = await res.json().catch(() => ({}));
+    if (!res.ok || j.error) {
+      const msg = relayFailureMessage(res, j, j.error);
+      await dashAuditClient(`Relay initial failed: ${msg}`);
+    }
+    await refreshAudit();
+  } catch (e) {
+    await dashAuditClient(`Relay initial failed: ${e}`);
+  }
+}
+
+async function relayGridReturn() {
+  if (!confirm("Run Grid return sequence? (~4+ s, blocking on server)"))
+    return;
+  try {
+    await dashAuditClient("Grid return relay sequence started (waiting on server…)");
+    const res = await fetch("/api/contactor/grid-return-sequence", { method: "POST" });
+    const j = await res.json().catch(() => ({}));
+    if (!res.ok || j.error) {
+      const msg = relayFailureMessage(res, j, j.error);
+      await dashAuditClient(`Grid return sequence failed: ${msg}`);
+    }
+    await refreshAudit();
+  } catch (e) {
+    await dashAuditClient(`Grid return sequence failed: ${e}`);
+  }
+}
+
+async function relayV2h() {
+  if (!confirm("Run V2H sequence? (~9+ s, blocking on server)")) return;
+  try {
+    await dashAuditClient("V2H relay sequence started (waiting on server…)");
+    const res = await fetch("/api/contactor/v2h-sequence", { method: "POST" });
+    const j = await res.json().catch(() => ({}));
+    if (!res.ok || j.error) {
+      const msg = relayFailureMessage(res, j, j.error);
+      await dashAuditClient(`V2H sequence failed: ${msg}`);
+    }
+    await refreshAudit();
+  } catch (e) {
+    await dashAuditClient(`V2H sequence failed: ${e}`);
+  }
+}
+
+function escapeHtml(s) {
+  const d = document.createElement("div");
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+async function refreshAudit() {
+  try {
+    const r = await fetch("/api/dashboard/audit");
+    const rows = await r.json();
+    const el = document.getElementById("dash-audit");
+    if (!el || !Array.isArray(rows)) return;
+    const html = [...rows].reverse().map((e) =>
+      `<div class="dash-audit-line">${escapeHtml(e.t)} — ${escapeHtml(e.msg)}</div>`
+    ).join("");
+    el.innerHTML = html;
+  } catch (_) { /* ignore */ }
+}
+
+async function dashAuditClient(msg) {
+  try {
+    await fetch("/api/dashboard/audit/log", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message: msg }),
+    });
+    await refreshAudit();
+  } catch (_) { /* ignore */ }
+}
+
+function clearDashAudit() {
+  const el = document.getElementById("dash-audit");
+  if (el) el.innerHTML = "";
+}
+
+function downloadDashAudit() {
+  window.location.href = "/api/dashboard/audit/download";
+}
+
+let _lastUnifiedSession = "";
+
+async function pollUnifiedStatus() {
+  try {
+    const r = await fetch("/api/logs/unified/status");
+    const j = await r.json();
+    const badge = document.getElementById("cap-unified-badge");
+    if (badge)
+      badge.textContent = j.running ? "capturing" : "idle";
+    if (badge)
+      badge.style.background = j.running ? "#d29922" : "#21262d";
+    setText("cap-can-mid", (j.can_relays && j.can_relays.mid_relay) || "—");
+    setText("cap-can-der", (j.can_relays && j.can_relays.der_relay) || "—");
+    setText("cap-can-nft", (j.can_relays && j.can_relays.nft_relay) || "—");
+    const ledEl = document.getElementById("cap-mod-led");
+    if (ledEl)
+      ledEl.textContent = j.mid_led_mode_request || "—";
+    const fl = document.getElementById("log-files-unified");
+    if (fl && j.session_id && Array.isArray(j.files)) {
+      _lastUnifiedSession = j.session_id;
+      fl.innerHTML = j.files.map((fn) =>
+        `<div><a href="#" style="color:#58a6ff" onclick="dlUnified('${encodeURIComponent(fn)}');return false;">${escapeHtml(fn)}</a></div>`
+      ).join("") || "<span>No files yet</span>";
+    }
+  } catch (_) { /* ignore */ }
+}
+
+function dlUnified(encodedRel) {
+  const rel = decodeURIComponent(encodedRel);
+  if (!_lastUnifiedSession) return;
+  window.location.href =
+    `/api/logs/unified/download?session_id=${encodeURIComponent(_lastUnifiedSession)}&rel=${encodeURIComponent(rel)}`;
+}
+
+async function unifiedStart() {
+  const username = document.getElementById("cap-unified-user").value.trim();
+  const host = document.getElementById("cap-unified-host").value.trim();
+  const password = document.getElementById("cap-unified-pass").value;
+  try {
+    const res = await fetch("/api/logs/unified/start", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username, host, password }),
+    });
+    const j = await res.json().catch(() => ({}));
+    if (!res.ok)
+      await dashAuditClient(`Unified capture start failed: ${j.error || res.status}`);
+    await refreshAudit();
+    pollUnifiedStatus();
+  } catch (e) {
+    await dashAuditClient(`Unified capture start failed: ${e}`);
+  }
+}
+
+async function unifiedStop() {
+  try {
+    await fetch("/api/logs/unified/stop", { method: "POST" });
+    await refreshAudit();
+    pollUnifiedStatus();
+  } catch (e) {
+    await dashAuditClient(`Unified stop failed: ${e}`);
+  }
+}
+
+function uartDlHref(absPath) {
+  return `/api/logs/uart/download?path=${encodeURIComponent(absPath)}`;
+}
+
+async function pollUartStatus() {
+  try {
+    const r = await fetch("/api/logs/uart/status");
+    const j = await r.json();
+    const badge = document.getElementById("cap-uart-badge");
+    if (badge) {
+      badge.textContent = j.running ? "capturing" : "idle";
+      badge.style.background = j.running ? "#d29922" : "#21262d";
+    }
+    const box = document.getElementById("cap-uart-links");
+    if (!box)
+      return;
+    const logs = Object.entries(j.log_files || {});
+    const caps = Object.entries(j.capture_files || {});
+    const rows = [];
+    logs.forEach(([k, p]) => {
+      if (p)
+        rows.push(`<div><a href="${uartDlHref(p)}" style="color:#58a6ff">${escapeHtml(k)} — uart log</a></div>`);
+    });
+    caps.forEach(([k, p]) => {
+      if (p)
+        rows.push(`<div><a href="${uartDlHref(p)}" style="color:#58a6ff">${escapeHtml(k)} — capture</a></div>`);
+    });
+    if (!j.running && !rows.length)
+      box.innerHTML = "<span>Start capture to create files. After stop, last session links remain here.</span>";
+    else if (!rows.length)
+      box.innerHTML = "<span>Capturing… files appear when the logger opens outputs.</span>";
+    else
+      box.innerHTML = rows.join("");
+  } catch (_) { /* ignore */ }
+}
+
+async function uartStart() {
+  const username = document.getElementById("cap-uart-user").value.trim();
+  const host = document.getElementById("cap-uart-host").value.trim();
+  const password = document.getElementById("cap-uart-pass").value;
+  const stringsRaw = document.getElementById("cap-uart-strings").value;
+  const strings = stringsRaw.split("\n").map((s) => s.trim()).filter(Boolean);
+  try {
+    const res = await fetch("/api/logs/uart/start", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username, host, password, strings }),
+    });
+    const j = await res.json().catch(() => ({}));
+    if (!res.ok || j.error)
+      await dashAuditClient(`UART start failed: ${j.error || res.status}`);
+    await refreshAudit();
+    setTimeout(pollUartStatus, 800);
+  } catch (e) {
+    await dashAuditClient(`UART start failed: ${e}`);
+  }
+}
+
+async function uartStop() {
+  try {
+    await fetch("/api/logs/uart/stop", { method: "POST" });
+    await refreshAudit();
+    pollUartStatus();
+  } catch (e) {
+    await dashAuditClient(`UART stop failed: ${e}`);
+  }
+}
+
+setInterval(pollUnifiedStatus, 2000);
+setInterval(pollUartStatus, 3000);
+setInterval(refreshAudit, 4000);
+pollUnifiedStatus();
+pollUartStatus();
+refreshAudit();
+</script>
+</body>
+</html>
