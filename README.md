@@ -17,4 +17,4 @@ pip install -r requirements.txt
 cd /path/to/repo
 uvicorn proxy_update:app --host 0.0.0.0 --port 8000
 ```
-### use http://<host-ip>:8000 from another device). host-ip is the ip of machine running uvicorn.
+### use http://host-ip:8000 from another device). host-ip is the ip of machine running uvicorn.
